@@ -66,7 +66,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "💎 FREE ACCESS ACTIVE 💎\n"
             "━━━━━━━━━━━━━━━━━━━━━\n"
             "💵 Apna Trading Capital / Balance enter karein:\n\n"
-            "📌 *Examples:* 100$ ya 1000₹", 
+            "📌 *Examples:* 100$ ya 1000₹\n\n"
+            "💡 *(Agar aapko capital change karna ho toh /capital command use karein)*", 
             parse_mode='Markdown'
         )
         return
@@ -90,6 +91,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(text, reply_markup=reply_markup, parse_mode='Markdown')
 
+async def set_capital_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id in users_db and users_db[user_id]['expiry'] > datetime.now():
+        user_state[user_id] = "AWAITING_CAPITAL"
+        await update.message.reply_text(
+            "🔄 **CHANGE CAPITAL**\n"
+            "━━━━━━━━━━━━━━━━━━━━━\n"
+            "💵 Apna naya Trading Capital / Balance enter karein:\n\n"
+            "📌 *Examples:* 200$ ya 5000₹",
+            parse_mode='Markdown'
+        )
+    else:
+        await update.message.reply_text("❌ Pehle apni Quotex ID verify karwayein ya /start dabayein.")
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     text = update.message.text.strip()
@@ -107,8 +122,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             user_state[user_id] = None
 
             await update.message.reply_text(
-                f"✅ Capital Set Successfully!\n"
-                f"💰 Capital: {capital_val} {currency_sym}", 
+                f"✅ Capital Updated Successfully!\n"
+                f"💰 New Capital: {capital_val} {currency_sym}\n\n"
+                f"💡 *(Jab chahein /capital command se ise phir se badal sakte hain)*", 
                 parse_mode='Markdown'
             )
             await send_trade_signal(update, context, user_id)
@@ -215,6 +231,7 @@ async def send_trade_signal(update: Update, context: ContextTypes.DEFAULT_TYPE, 
         f"🔥 Continuous Wins: {streak}\n\n"
         f"👉 NEXT TRADE AMOUNT ({pct}%): {amount} {curr}\n"
         f"━━━━━━━━━━━━━━━━━━━━━\n"
+        f"💡 *(Capital change karne ke liye /capital type karein)*\n"
         f"Select trade result after completion:"
     )
 
@@ -286,6 +303,7 @@ if __name__ == '__main__':
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("capital", set_capital_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.add_handler(CallbackQueryHandler(admin_button_callback, pattern="^(approve|reject|guide)_"))
     app.add_handler(CallbackQueryHandler(trade_result_callback, pattern="^trade_"))
